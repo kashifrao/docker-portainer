@@ -1,0 +1,43 @@
+
+    - name: Creates directory
+      ansible.builtin.file:
+        path: /usr/src/portainer
+        state: directory
+        owner: ansible-c
+        group: ans-admin
+        mode: 0775
+        recurse: yes
+      become_user: root
+
+    - name: "Copy SSL Cert File"
+      copy:
+        src:  "/etc/pki/tls/certs/{{ project_domain }}/fullchain.pem"
+        dest: /usr/src/portainer/portainer.crt
+        owner: ansible-c
+        group: ans-admin
+        mode: '755'
+      become_user: root
+
+    - name: "Copy SSL Key File"
+      copy:
+        src:  "/etc/pki/tls/certs/{{ project_domain }}/privkey.pem"
+        dest: /usr/src/portainer/portainer.key
+        owner: ansible-c
+        group: ans-admin
+        mode: '755'
+
+    - name: Install portainer
+      docker_container:
+        name: portainer
+        state: started
+        published_ports:
+          - "9443:9443"         
+        image: portainer/portainer-ee:2.21.4
+        restart: true
+        volumes:
+          - "/var/run/docker.sock:/var/run/docker.sock"
+          - "portainer_data:/data"
+          - "/usr/src/portainer:/certs"
+        command:
+          --sslcert /certs/portainer.crt --sslkey /certs/portainer.key
+      become_user: root
